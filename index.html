@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错题怪兽卡片 - Monster Card V1.0</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Space Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-cream: #FAF6EE;
+      --card-bg: #FFFDF9;
+      --neo-black: #18181B;
+      --neo-yellow: #FFE600;
+      --neo-pink: #FF6B8B;
+      --neo-cyan: #00F0FF;
+      --neo-purple: #B388FF;
+      --neo-green: #05FFA1;
+      --neo-orange: #FF9F1C;
+    }
+
+    body {
+      background-color: var(--bg-cream);
+      color: var(--neo-black);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .font-display {
+      font-family: 'Fredoka', 'Inter', sans-serif;
+    }
+
+    /* Neo-Brutalism Box Shadows & Borders */
+    .neo-box {
+      border: 3px solid var(--neo-black);
+      box-shadow: 4px 4px 0px var(--neo-black);
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .neo-box-sm {
+      border: 2.5px solid var(--neo-black);
+      box-shadow: 2.5px 2.5px 0px var(--neo-black);
+    }
+
+    .neo-box-lg {
+      border: 3.5px solid var(--neo-black);
+      box-shadow: 6px 6px 0px var(--neo-black);
+    }
+
+    .neo-btn {
+      border: 2.5px solid var(--neo-black);
+      box-shadow: 3.5px 3.5px 0px var(--neo-black);
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s ease;
+    }
+    .neo-btn:hover {
+      transform: translate(-1.5px, -1.5px);
+      box-shadow: 5px 5px 0px var(--neo-black);
+    }
+    .neo-btn:active {
+      transform: translate(2.5px, 2.5px);
+      box-shadow: 1px 1px 0px var(--neo-black);
+    }
+
+    .perspective-1000 {
+      perspective: 1200px;
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-style: preserve-3d;
+    }
+
+    .card-flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      top: 0;
+      left: 0;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Stamp animation for purification */
+    @keyframes stampDrop {
+      0% { transform: scale(3.5) rotate(-25deg); opacity: 0; }
+      70% { transform: scale(0.9) rotate(-12deg); opacity: 1; }
+      100% { transform: scale(1) rotate(-15deg); opacity: 0.95; }
+    }
+    .stamp-purified {
+      animation: stampDrop 0.45s ease-out forwards;
+    }
+
+    /* Monster Level Border Styles */
+    .border-lv1 { border-color: var(--neo-black); }
+    .border-lv2 { border-color: #F97316; box-shadow: 4px 4px 0px #C2410C; }
+    .border-lv3 { 
+      border-color: #EF4444; 
+      box-shadow: 4px 4px 0px #991B1B;
+      animation: pulseRage 2s infinite ease-in-out;
+    }
+    @keyframes pulseRage {
+      0%, 100% { outline: 3px solid transparent; }
+      50% { outline: 3px solid #EF4444; }
+    }
+
+    /* Scratchpad Canvas */
+    #scratchpadCanvas {
+      touch-action: none;
+      cursor: crosshair;
+      background-color: #FFFFFF;
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: #FFFFFF !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .page-break {
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+  <!-- Top Navigation & Stats Banner -->
+  <header class="w-full bg-[#FFFDF9] border-b-4 border-black px-4 py-3 sticky top-0 z-30 no-print">
+    <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Logo & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-yellow-300 border-2 border-black rounded-lg flex items-center justify-center font-display text-2xl shadow-[2px_2px_0px_#000]">
+          👾
+        </div>
+        <div>
+          <h1 class="font-display text-xl sm:text-2xl font-bold tracking-tight text-black leading-none">
+            错题怪兽卡片
+          </h1>
+          <span class="text-xs font-bold text-gray-500 tracking-wider">V1.0 MVP PROTOTYPE</span>
+        </div>
+      </div>
+
+      <!-- Stats Bar (PRD: 待消灭 X | 已净化 Y) -->
+      <div class="flex items-center gap-2 sm:gap-4 bg-[#FAF6EE] px-3 py-1.5 rounded-xl border-2 border-black neo-box-sm">
+        <div class="flex items-center gap-1.5 text-xs sm:text-sm font-bold">
+          <span class="inline-block w-3 h-3 rounded-full bg-red-500 border border-black animate-pulse"></span>
+          <span>待消灭:</span>
+          <span id="statActiveCount" class="bg-red-200 text-red-900 px-2 py-0.5 rounded border border-black text-sm font-extrabold">0</span>
+        </div>
+        <div class="h-4 w-[2px] bg-black"></div>
+        <div class="flex items-center gap-1.5 text-xs sm:text-sm font-bold">
+          <span class="inline-block w-3 h-3 rounded-full bg-green-400 border border-black"></span>
+          <span>已净化:</span>
+          <span id="statPurifiedCount" class="bg-green-200 text-green-900 px-2 py-0.5 rounded border border-black text-sm font-extrabold">0</span>
+        </div>
+      </div>
+
+      <!-- Action Group -->
+      <div class="flex items-center gap-2">
+        <button id="btnQuickPreset" title="快速填充长题干测试数据" class="neo-btn bg-white hover:bg-yellow-100 text-black px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1">
+          <span>⚡ 加载长题干测试</span>
+        </button>
+        <button id="btnPrintSheet" title="打印生成纸质复习卷" class="neo-btn bg-purple-200 hover:bg-purple-300 text-black px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1">
+          <span>🖨️ 打印试炼卷</span>
+        </button>
+        <button id="btnOpenAddModal" class="neo-btn bg-yellow-400 hover:bg-yellow-300 text-black px-3.5 py-1.5 rounded-lg text-sm flex items-center gap-1.5 font-bold">
+          <span class="text-base">➕</span>
+          <span>召唤怪兽</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Secondary View Tab Bar -->
+    <div class="max-w-6xl mx-auto flex items-center justify-between border-t-2 border-gray-200 mt-2.5 pt-2">
+      <div class="flex items-center gap-2">
+        <button id="tabBattle" class="neo-btn bg-black text-white px-3.5 py-1 rounded-md text-xs font-bold transition">
+          ⚔️ 主战场 (待消灭)
+        </button>
+        <button id="tabGallery" class="neo-btn bg-white text-black hover:bg-gray-100 px-3.5 py-1 rounded-md text-xs font-bold transition">
+          🏆 图鉴展厅 (已净化)
+        </button>
+      </div>
+      
+      <!-- Weekend Trial Filter Pill -->
+      <div class="flex items-center gap-2">
+        <button id="btnToggleWeekendTrial" class="neo-btn bg-orange-200 hover:bg-orange-300 text-black px-2.5 py-1 rounded-md text-xs font-extrabold flex items-center gap-1">
+          <span>🔥 周末试炼排序</span>
+          <span id="trialBadge" class="bg-black text-white text-[10px] px-1 rounded hidden">优先</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-6xl w-full mx-auto p-4 flex-1">
+    
+    <!-- Status Toast / Alert Box (PRD Exception/Recovery) -->
+    <div id="statusToast" class="hidden mb-4 p-3 rounded-lg border-2 border-black neo-box-sm text-sm font-bold flex items-center justify-between">
+      <span id="statusToastMsg">系统已恢复</span>
+      <button onclick="document.getElementById('statusToast').classList.add('hidden')" class="text-xs bg-black text-white px-2 py-0.5 rounded">知道了</button>
+    </div>
+
+    <!-- VIEW 1: Battleground (待消灭列表) -->
+    <section id="viewBattleground" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-bold flex items-center gap-1.5 font-display">
+            <span>👾 盘踞中的错题怪兽</span>
+          </h2>
+          <span id="trialQueueNotice" class="text-xs bg-orange-100 border border-orange-400 text-orange-800 px-2 py-0.5 rounded font-semibold hidden">
+            已按权重排序：优先攻克顽固与积压怪兽
+          </span>
+        </div>
+        <span class="text-xs text-gray-500 font-medium hidden sm:inline">点击卡片「发起挑战」开始翻转复习</span>
+      </div>
+
+      <!-- Empty State for Battleground (PRD Requirement) -->
+      <div id="battleEmptyState" class="hidden flex-col items-center justify-center p-12 text-center bg-white border-3 border-black neo-box rounded-2xl my-8">
+        <div class="w-24 h-24 bg-yellow-100 rounded-full border-3 border-black flex items-center justify-center text-5xl mb-4 shadow-[3px_3px_0_#000]">
+          🏝️
+        </div>
+        <h3 class="font-display text-2xl font-bold text-gray-900 mb-2">当前领地风平浪静！</h3>
+        <p class="text-gray-600 max-w-md text-sm mb-6 leading-relaxed">
+          还没有发现任何错题怪兽出没。学习中遇到难点或马虎做错的题目？点击下方按钮录入，召唤你的第一只错题怪兽吧！
+        </p>
+        <button id="btnEmptySpawn" class="neo-btn bg-yellow-400 hover:bg-yellow-300 text-black px-6 py-2.5 rounded-xl font-bold text-base flex items-center gap-2">
+          <span>👾 召唤第一只怪兽</span>
+        </button>
+      </div>
+
+      <!-- Monster Cards Grid (Responsive 1/2/3 cols) -->
+      <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Cards will be injected dynamically -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: Gallery (已净化图鉴) -->
+    <section id="viewGallery" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold flex items-center gap-1.5 font-display">
+          <span>🏆 怪兽封印与战利品展厅</span>
+        </h2>
+        <span class="text-xs text-gray-500">所有被成功攻克并净化的错题徽章</span>
+      </div>
+
+      <!-- Empty State for Gallery (PRD Requirement) -->
+      <div id="galleryEmptyState" class="hidden flex-col items-center justify-center p-12 text-center bg-white border-3 border-black neo-box rounded-2xl my-8">
+        <div class="w-24 h-24 bg-gray-100 rounded-full border-3 border-black flex items-center justify-center text-5xl mb-4 shadow-[3px_3px_0_#000]">
+          🛡️
+        </div>
+        <h3 class="font-display text-2xl font-bold text-gray-900 mb-2">暂无收服的怪兽徽章</h3>
+        <p class="text-gray-600 max-w-md text-sm mb-6 leading-relaxed">
+          这里陈列着你战胜的知识强敌。快去主战场向错题发起挑战，做对题目就能将它们净化并收纳在此！
+        </p>
+        <button id="btnBackToBattle" class="neo-btn bg-black text-white px-5 py-2 rounded-xl text-sm font-bold">
+          前往主战场挑战
+        </button>
+      </div>
+
+      <!-- Gallery Grid -->
+      <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Purified cards injected dynamically -->
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL 1: 3D Challenge & Canvas Scratchpad Modal -->
+  <div id="challengeModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto no-print">
+    <div class="bg-[#FFFDF9] border-4 border-black neo-box-lg rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden relative">
+      
+      <!-- Modal Header -->
+      <div class="bg-yellow-300 border-b-3 border-black px-4 py-2.5 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span id="challengeMonsterIcon" class="text-2xl">👾</span>
+          <div>
+            <h3 id="challengeMonsterTitle" class="font-display font-bold text-base leading-none">正在挑战：遗忘黏黏怪</h3>
+            <span id="challengeLevelBadge" class="text-[10px] font-extrabold uppercase px-1.5 py-0.2 bg-black text-white rounded">LV1 初出茅庐</span>
+          </div>
+        </div>
+        <button id="btnCloseChallenge" class="w-8 h-8 rounded-lg bg-white border-2 border-black flex items-center justify-center font-extrabold hover:bg-red-400 transition text-sm">
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
+        
+        <!-- Question Box -->
+        <div class="bg-white border-2.5 border-black rounded-xl p-3.5 neo-box-sm">
+          <div class="flex items-center justify-between text-xs font-bold text-gray-500 mb-1.5">
+            <span class="flex items-center gap-1">📌 题目内容</span>
+            <span id="challengeReasonTag" class="bg-purple-100 text-purple-900 border border-purple-300 px-2 py-0.5 rounded text-[11px]">公式记错</span>
+          </div>
+          <!-- Long text supported with max-height & clean typography -->
+          <div id="challengeQuestionText" class="text-sm font-semibold text-gray-900 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto pr-2">
+            题干加载中...
+          </div>
+        </div>
+
+        <!-- Interactive Scratchpad (草稿演算板) -->
+        <div class="border-2.5 border-black rounded-xl p-3 bg-[#FAF6EE] neo-box-sm">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-extrabold flex items-center gap-1">
+              ✏️ 草稿演算板 (在此写下解题过程)
+            </span>
+            <div class="flex items-center gap-1.5">
+              <button id="btnScratchColorBlack" class="w-5 h-5 rounded-full bg-black border border-gray-400"></button>
+              <button id="btnScratchColorRed" class="w-5 h-5 rounded-full bg-red-600 border border-gray-400"></button>
+              <button id="btnScratchColorBlue" class="w-5 h-5 rounded-full bg-blue-600 border border-gray-400"></button>
+              <button id="btnScratchClear" class="text-[10px] neo-btn bg-white px-2 py-0.5 rounded">清空</button>
+            </div>
+          </div>
+          <div class="border-2 border-black rounded-lg overflow-hidden bg-white">
+            <canvas id="scratchpadCanvas" width="580" height="150" class="w-full block"></canvas>
+          </div>
+        </div>
+
+        <!-- Answer Mask & Reveal Section -->
+        <div class="border-2.5 border-black rounded-xl p-3.5 bg-white neo-box-sm relative overflow-hidden">
+          <div class="flex items-center justify-between text-xs font-bold text-gray-500 mb-1.5">
+            <span>🔑 正确答案与解析</span>
+            <span class="text-[10px] text-gray-400">核对后做出真实评判</span>
+          </div>
+
+          <!-- Obscured Layer / Revealed Answer -->
+          <div id="answerContentBox" class="relative min-h-[70px] flex items-center justify-center p-2 rounded-lg bg-gray-50 border border-dashed border-gray-300">
+            <!-- Mask view -->
+            <div id="answerMask" class="absolute inset-0 bg-gray-900/90 backdrop-blur-md flex flex-col items-center justify-center p-3 text-center rounded-lg z-10">
+              <p class="text-white text-xs font-bold mb-2">⚠️ 答案已遮罩封印，请先独立演算</p>
+              <button id="btnRevealAnswer" class="neo-btn bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-1.5 rounded-lg text-xs font-extrabold">
+                👀 查看正确答案
+              </button>
+            </div>
+            
+            <!-- Real Answer Text (Revealed) -->
+            <div id="revealedAnswerText" class="text-sm text-gray-800 font-bold whitespace-pre-wrap w-full py-1">
+              这里是答案内容...
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer (PRD: Two verdict buttons) -->
+      <div id="challengeVerdictBar" class="bg-gray-100 border-t-3 border-black p-3.5 flex items-center justify-between gap-3">
+        <button id="btnVerdictFail" class="neo-btn flex-1 bg-red-100 hover:bg-red-200 text-red-900 py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-1.5">
+          <span>❌ 算错了，下次再战</span>
+          <span class="text-[10px] opacity-75">(怪兽升级愤怒)</span>
+        </button>
+        <button id="btnVerdictPass" class="neo-btn flex-1 bg-green-400 hover:bg-green-300 text-black py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-1.5">
+          <span>✨ 我做对了，立即净化</span>
+          <span class="text-[10px] opacity-75">(收入图鉴)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 2: Record / Spawn Monster Dialog (召唤怪兽) -->
+  <div id="addModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto no-print">
+    <div class="bg-[#FFFDF9] border-4 border-black neo-box-lg rounded-2xl max-w-lg w-full overflow-hidden relative">
+      
+      <!-- Modal Header -->
+      <div class="bg-yellow-300 border-b-3 border-black px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📜</span>
+          <h3 class="font-display font-bold text-lg leading-none">召唤错题怪兽 (录入)</h3>
+        </div>
+        <button id="btnCloseAddModal" class="w-8 h-8 rounded-lg bg-white border-2 border-black flex items-center justify-center font-extrabold hover:bg-red-400 transition text-sm">
+          ✕
+        </button>
+      </div>
+
+      <!-- Add Form with Strict Validations -->
+      <form id="addMonsterForm" class="p-5 space-y-4" novalidate>
+        
+        <!-- Field 1: Question -->
+        <div>
+          <label class="block text-xs font-black tracking-wider uppercase text-gray-700 mb-1">
+            1. 错题题目 <span class="text-red-500">*</span>
+          </label>
+          <textarea id="inputQuestion" rows="3" placeholder="粘贴或输入错题题目（支持长文本及题目描述）..." class="w-full bg-white border-2.5 border-black rounded-xl p-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 transition resize-none"></textarea>
+          <span id="errQuestion" class="hidden text-xs text-red-600 font-bold mt-1 block">
+            ⚠️ 请输入错题题目
+          </span>
+        </div>
+
+        <!-- Field 2: Correct Answer -->
+        <div>
+          <label class="block text-xs font-black tracking-wider uppercase text-gray-700 mb-1">
+            2. 正确答案与关键解法 <span class="text-red-500">*</span>
+          </label>
+          <textarea id="inputAnswer" rows="2" placeholder="输入正确选项、详细步骤或核心公式..." class="w-full bg-white border-2.5 border-black rounded-xl p-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400 transition resize-none"></textarea>
+          <span id="errAnswer" class="hidden text-xs text-red-600 font-bold mt-1 block">
+            ⚠️ 请填写正确答案，否则无法战胜怪兽
+          </span>
+        </div>
+
+        <!-- Field 3: Mistake Reason (Rule-based monster mapping) -->
+        <div>
+          <label class="block text-xs font-black tracking-wider uppercase text-gray-700 mb-1.5">
+            3. 错误原因 (决定怪兽形态) <span class="text-red-500">*</span>
+          </label>
+          <div id="reasonRadioGroup" class="grid grid-cols-3 gap-2">
+            <!-- Reason Option A -->
+            <label class="cursor-pointer border-2 border-black rounded-xl p-2 bg-white flex flex-col items-center text-center text-xs font-bold transition hover:bg-purple-50">
+              <input type="radio" name="mistakeReason" value="FORMULA_FORGOTTEN" class="hidden">
+              <span class="text-2xl mb-1">🧪</span>
+              <span>公式记错</span>
+              <span class="text-[10px] text-gray-400 font-normal">遗忘黏黏怪</span>
+            </label>
+
+            <!-- Reason Option B -->
+            <label class="cursor-pointer border-2 border-black rounded-xl p-2 bg-white flex flex-col items-center text-center text-xs font-bold transition hover:bg-orange-50">
+              <input type="radio" name="mistakeReason" value="CARELESS" class="hidden">
+              <span class="text-2xl mb-1">😈</span>
+              <span>马虎粗心</span>
+              <span class="text-[10px] text-gray-400 font-normal">分心呆呆魔</span>
+            </label>
+
+            <!-- Reason Option C -->
+            <label class="cursor-pointer border-2 border-black rounded-xl p-2 bg-white flex flex-col items-center text-center text-xs font-bold transition hover:bg-teal-50">
+              <input type="radio" name="mistakeReason" value="CONCEPT_CONFUSED" class="hidden">
+              <span class="text-2xl mb-1">🌫️</span>
+              <span>概念混淆</span>
+              <span class="text-[10px] text-gray-400 font-normal">迷雾混沌兽</span>
+            </label>
+          </div>
+          <span id="errReason" class="hidden text-xs text-red-600 font-bold mt-1 block">
+            ⚠️ 请选择错因，为怪兽赋予形态
+          </span>
+        </div>
+
+        <!-- Simulated V2 Attachment Placeholder (Visual only) -->
+        <div class="p-2.5 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-center">
+          <span class="text-[11px] text-gray-400 font-medium">📷 [V2 云端预览] 试卷拍照与图像切片功能待开放</span>
+        </div>
+
+        <!-- Submit & Error testing buttons -->
+        <div class="pt-2 flex items-center justify-between gap-3">
+          <button type="button" id="btnTestSimulateError" class="text-xs text-gray-500 hover:text-red-600 underline">
+            [测试] 模拟保存失败
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btnCancelAdd" class="neo-btn bg-white hover:bg-gray-100 text-black px-4 py-2 rounded-xl text-xs font-bold">
+              取消
+            </button>
+            <button type="submit" class="neo-btn bg-yellow-400 hover:bg-yellow-300 text-black px-5 py-2 rounded-xl text-sm font-extrabold flex items-center gap-1.5">
+              <span>⚡ 立即生成</span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- PRINT-ONLY TEMPLATE (For weekend revision test paper) -->
+  <div id="printSheetContainer" class="hidden print-only p-8 bg-white max-w-4xl mx-auto">
+    <div class="border-b-2 border-black pb-4 mb-6 flex justify-between items-end">
+      <div>
+        <h1 class="text-2xl font-bold">错题怪兽试炼卷 (周末攻关)</h1>
+        <p class="text-xs text-gray-600">学生自测专属 | 战胜每一只错题怪兽</p>
+      </div>
+      <div class="text-right text-xs">
+        <div>打印日期: <span id="printDate"></span></div>
+        <div>总计题数: <span id="printTotalCount"></span> 道</div>
+      </div>
+    </div>
+    <div id="printCardsList" class="space-y-6">
+      <!-- Items dynamically populated before window.print() -->
+    </div>
+  </div>
+
+  <!-- Footer Info & Spec Badges -->
+  <footer class="w-full bg-[#FAF6EE] border-t-2 border-black py-4 px-4 text-center text-xs text-gray-500 no-print">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="font-extrabold text-black">错题怪兽卡片 V1.0</span>
+        <span class="bg-yellow-200 text-yellow-900 border border-black px-1.5 rounded text-[10px] font-bold">IndexedDB 驱动</span>
+        <span class="bg-blue-100 text-blue-900 border border-black px-1.5 rounded text-[10px] font-bold">Capacitor-Ready</span>
+      </div>
+      <p class="text-[11px]">
+        单机离线运行 | 数据保存在当前浏览器存储 | 支持移动端与宽屏自适应
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    /* =========================================================================
+       1. IndexedDB 存储适配层 (Spec v1.0: wrong_question_monster_db)
+       ========================================================================= */
+    const DB_NAME = 'wrong_question_monster_db';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'monsters';
+
+    let dbInstance = null;
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          console.warn('IndexedDB not supported, falling back to memory/localStorage');
+          reject(new Error('ERR_IDB_UNAVAILABLE'));
+          return;
+        }
+
+        const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('status', 'status', { unique: false });
+            store.createIndex('level', 'level', { unique: false });
+            store.createIndex('createdAt', 'createdAt', { unique: false });
+          }
+        };
+
+        request.onsuccess = (event) => {
+          dbInstance = event.target.result;
+          resolve(dbInstance);
+        };
+
+        request.onerror = (event) => {
+          reject(event.target.error || new Error('ERR_IDB_UNAVAILABLE'));
+        };
+      });
+    }
+
+    // Database CRUD Operations
+    async function idbGetAllMonsters() {
+      const db = await openDatabase();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSaveMonster(monster) {
+      const db = await openDatabase();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(monster);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbDeleteMonster(id) {
+      const db = await openDatabase();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    /* =========================================================================
+       2. Web Audio API 音效合成引擎 (无需任何外部音频资源)
+       ========================================================================= */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playSpawn() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(587.33, now + 0.18);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.23);
+      }
+
+      playFlip() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.linearRampToValueAtTime(750, now + 0.08);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+      }
+
+      playUpgradeFail() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.linearRampToValueAtTime(140, now + 0.28);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      playPurifiedFanfare() {
+        this.init();
+        if (!this.ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const now = this.ctx.currentTime + idx * 0.09;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* =========================================================================
+       3. 状态管理与预设怪兽映射规则 (PRD/Spec v1.0)
+       ========================================================================= */
+    const MONSTER_SPECIES = {
+      FORMULA_FORGOTTEN: {
+        name: '遗忘黏黏怪',
+        avatar: '🧪',
+        color: '#EDE9FE',
+        borderBadge: '公式记错',
+        desc: '常常吸走脑海中刚背下的公理与定义'
+      },
+      CARELESS: {
+        name: '分心呆呆魔',
+        avatar: '😈',
+        color: '#FFEDD5',
+        borderBadge: '马虎粗心',
+        desc: '最喜欢引诱你漏写负号或看错小数点'
+      },
+      CONCEPT_CONFUSED: {
+        name: '迷雾混沌兽',
+        avatar: '🌫️',
+        color: '#CCFBF1',
+        borderBadge: '概念混淆',
+        desc: '吐出大片思想迷雾，把相似概念搅和在一起'
+      }
+    };
+
+    let allMonsters = [];
+    let currentTab = 'battle'; // 'battle' | 'gallery'
+    let isWeekendTrialMode = false;
+    let currentChallengingMonster = null;
+
+    /* =========================================================================
+       4. 核心业务与渲染逻辑
+       ========================================================================= */
+    async function loadAllData() {
+      try {
+        allMonsters = await idbGetAllMonsters();
+      } catch (err) {
+        showToast('存储引擎连接警告：已降级为临时内存模式', true);
+        console.error(err);
+      }
+      renderApp();
+    }
+
+    function renderApp() {
+      // Filter Active and Purified
+      const activeList = allMonsters.filter(m => m.status === 'ACTIVE');
+      const purifiedList = allMonsters.filter(m => m.status === 'PURIFIED');
+
+      // Update Header Badges
+      document.getElementById('statActiveCount').textContent = activeList.length;
+      document.getElementById('statPurifiedCount').textContent = purifiedList.length;
+
+      // Handle Weekend Trial Sorting (Spec Weight Formula)
+      let displayActive = [...activeList];
+      if (isWeekendTrialMode) {
+        const now = Date.now();
+        displayActive.sort((a, b) => {
+          const ageDaysA = Math.floor((now - a.createdAt) / 86400000);
+          const ageDaysB = Math.floor((now - b.createdAt) / 86400000);
+          const weightA = (a.level * 10) + ageDaysA;
+          const weightB = (b.level * 10) + ageDaysB;
+          return weightB - weightA;
+        });
+      } else {
+        // Default sort: newest first
+        displayActive.sort((a, b) => b.createdAt - a.createdAt);
+      }
+
+      // Render Active Grid
+      const cardsGrid = document.getElementById('cardsGrid');
+      const battleEmpty = document.getElementById('battleEmptyState');
+      cardsGrid.innerHTML = '';
+
+      if (displayActive.length === 0) {
+        battleEmpty.classList.remove('hidden');
+        battleEmpty.classList.add('flex');
+      } else {
+        battleEmpty.classList.add('hidden');
+        battleEmpty.classList.remove('flex');
+
+        displayActive.forEach(card => {
+          const cardEl = createMonsterCardElement(card);
+          cardsGrid.appendChild(cardEl);
+        });
+      }
+
+      // Render Gallery Grid
+      const galleryGrid = document.getElementById('galleryGrid');
+      const galleryEmpty = document.getElementById('galleryEmptyState');
+      galleryGrid.innerHTML = '';
+
+      if (purifiedList.length === 0) {
+        galleryEmpty.classList.remove('hidden');
+        galleryEmpty.classList.add('flex');
+      } else {
+        galleryEmpty.classList.add('hidden');
+        galleryEmpty.classList.remove('flex');
+
+        purifiedList.forEach(card => {
+          const trophyEl = createPurifiedBadgeElement(card);
+          galleryGrid.appendChild(trophyEl);
+        });
+      }
+    }
+
+    /* Helper: Create 3D Flip Card DOM */
+    function createMonsterCardElement(card) {
+      const species = MONSTER_SPECIES[card.reason] || MONSTER_SPECIES.CARELESS;
+      const levelClass = card.level === 3 ? 'border-lv3' : (card.level === 2 ? 'border-lv2' : 'border-lv1');
+      const levelTitle = card.level === 3 ? 'LV3 顽固霸主 🔥' : (card.level === 2 ? 'LV2 狂暴反扑 ⚡' : 'LV1 初出茅庐');
+      const levelBadgeBg = card.level === 3 ? 'bg-red-600 text-white' : (card.level === 2 ? 'bg-orange-500 text-white' : 'bg-black text-white');
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'perspective-1000 h-[360px] w-full';
+      wrapper.id = `card-wrapper-${card.id}`;
+
+      wrapper.innerHTML = `
+        <div class="card-inner neo-box rounded-2xl ${levelClass} bg-white h-full relative cursor-pointer" id="inner-${card.id}">
+          
+          <!-- FRONT FACE (Monster Identity & Teaser) -->
+          <div class="card-front p-4 flex flex-col justify-between h-full bg-[#FFFDF9] rounded-2xl select-none">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${levelBadgeBg}">
+                  ${levelTitle}
+                </span>
+                <span class="text-xs bg-gray-100 border border-black px-2 py-0.5 rounded font-bold">
+                  ${species.borderBadge}
+                </span>
+              </div>
+
+              <!-- Monster Visual Box -->
+              <div class="w-full h-28 rounded-xl border-2 border-black flex flex-col items-center justify-center p-2 mb-3 shadow-[2px_2px_0_#000]" style="background-color: ${species.color}">
+                <span class="text-5xl mb-1">${species.avatar}</span>
+                <span class="font-display font-bold text-sm tracking-wide text-black">${species.name}</span>
+              </div>
+
+              <!-- Question Teaser (Clamped for layout) -->
+              <div class="text-xs text-gray-700 font-semibold line-clamp-3 bg-gray-50 p-2.5 rounded-lg border border-dashed border-gray-300">
+                ${escapeHtml(card.question)}
+              </div>
+            </div>
+
+            <!-- Card Bottom Bar -->
+            <div class="border-t-2 border-black/10 pt-2 flex items-center justify-between gap-2">
+              <span class="text-[11px] text-gray-400 font-medium">
+                ${new Date(card.createdAt).toLocaleDateString()} 录入
+              </span>
+              <button class="btn-flip-card neo-btn bg-yellow-400 hover:bg-yellow-300 text-black px-3 py-1 rounded-lg text-xs font-black">
+                🔄 翻看 / 挑战
+              </button>
+            </div>
+          </div>
+
+          <!-- BACK FACE (Challenge View) -->
+          <div class="card-back p-4 flex flex-col justify-between h-full bg-yellow-50 rounded-2xl">
+            <div>
+              <div class="flex items-center justify-between border-b-2 border-black pb-1.5 mb-2">
+                <span class="text-xs font-bold text-black flex items-center gap-1">
+                  📖 题目详情
+                </span>
+                <button class="btn-flip-back text-xs font-bold text-gray-500 hover:text-black">
+                  ↩ 翻回正面
+                </button>
+              </div>
+              <div class="text-xs text-gray-800 font-semibold max-h-44 overflow-y-auto whitespace-pre-wrap pr-1 mb-2">
+                ${escapeHtml(card.question)}
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="text-[11px] text-center text-gray-500 font-bold">
+                已遮罩答案 • 点击进入沉浸挑战
+              </div>
+              <button class="btn-launch-challenge neo-btn bg-black text-white hover:bg-gray-800 w-full py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1">
+                <span>⚔️ 打开演算板挑战</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      `;
+
+      // Event: Flip on button click
+      const inner = wrapper.querySelector(`#inner-${card.id}`);
+      wrapper.querySelector('.btn-flip-card').addEventListener('click', (e) => {
+        e.stopPropagation();
+        sound.playFlip();
+        wrapper.classList.toggle('card-flipped');
+      });
+      wrapper.querySelector('.btn-flip-back').addEventListener('click', (e) => {
+        e.stopPropagation();
+        sound.playFlip();
+        wrapper.classList.remove('card-flipped');
+      });
+
+      // Launch full scratchpad challenge modal
+      wrapper.querySelector('.btn-launch-challenge').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openChallengeModal(card);
+      });
+
+      return wrapper;
+    }
+
+    /* Helper: Create Purified Gallery Badge */
+    function createPurifiedBadgeElement(card) {
+      const species = MONSTER_SPECIES[card.reason] || MONSTER_SPECIES.CARELESS;
+      const el = document.createElement('div');
+      el.className = 'bg-white border-2.5 border-black rounded-xl p-3 neo-box-sm flex flex-col items-center text-center relative overflow-hidden';
+      el.innerHTML = `
+        <div class="absolute -right-6 -bottom-6 text-green-500/15 text-8xl font-black select-none pointer-events-none">
+          ✓
+        </div>
+        <div class="w-14 h-14 rounded-full border-2 border-black flex items-center justify-center text-3xl mb-2 shadow-[2px_2px_0_#000]" style="background-color: ${species.color}">
+          ${species.avatar}
+        </div>
+        <h4 class="font-display font-bold text-sm text-black leading-tight">${species.name}</h4>
+        <span class="text-[10px] bg-green-100 text-green-800 border border-green-400 font-bold px-1.5 py-0.2 rounded mt-1">
+          已封印 • 完美净化
+        </span>
+        <p class="text-[11px] text-gray-500 line-clamp-2 mt-2 font-medium">
+          ${escapeHtml(card.question)}
+        </p>
+      `;
+      return el;
+    }
+
+    /* =========================================================================
+       5. 演算草稿板逻辑 (Canvas Scratchpad)
+       ========================================================================= */
+    const canvas = document.getElementById('scratchpadCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let scratchColor = '#000000';
+
+    function initCanvas() {
+      // Resize correctly according to CSS display width
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * (window.devicePixelRatio || 1);
+      canvas.height = 160 * (window.devicePixelRatio || 1);
+      ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      clearCanvas();
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      const pos = getCanvasPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.strokeStyle = scratchColor;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+      const pos = getCanvasPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    });
+
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+
+    // Touch events for mobile/tablet scratchpad
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isDrawing = true;
+      const pos = getCanvasPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.strokeStyle = scratchColor;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const pos = getCanvasPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => { isDrawing = false; });
+
+    document.getElementById('btnScratchClear').addEventListener('click', clearCanvas);
+    document.getElementById('btnScratchColorBlack').addEventListener('click', () => { scratchColor = '#000000'; });
+    document.getElementById('btnScratchColorRed').addEventListener('click', () => { scratchColor = '#DC2626'; });
+    document.getElementById('btnScratchColorBlue').addEventListener('click', () => { scratchColor = '#2563EB'; });
+
+    /* =========================================================================
+       6. 挑战弹窗逻辑与状态转移 (Pass / Fail / Upgrade)
+       ========================================================================= */
+    function openChallengeModal(monster) {
+      currentChallengingMonster = monster;
+      const species = MONSTER_SPECIES[monster.reason] || MONSTER_SPECIES.CARELESS;
+
+      document.getElementById('challengeMonsterIcon').textContent = species.avatar;
+      document.getElementById('challengeMonsterTitle').textContent = `正在挑战：${species.name}`;
+      
+      const badge = document.getElementById('challengeLevelBadge');
+      badge.textContent = `LV${monster.level} ${monster.level === 3 ? '顽固霸主' : (monster.level === 2 ? '强化反扑' : '初出茅庐')}`;
+      badge.className = `text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded ${monster.level === 3 ? 'bg-red-600 text-white' : (monster.level === 2 ? 'bg-orange-500 text-white' : 'bg-black text-white')}`;
+
+      document.getElementById('challengeReasonTag').textContent = species.borderBadge;
+      document.getElementById('challengeQuestionText').textContent = monster.question;
+      document.getElementById('revealedAnswerText').textContent = monster.correctAnswer;
+
+      // Reset Answer Mask
+      document.getElementById('answerMask').classList.remove('hidden');
+
+      // Clear scratchpad
+      setTimeout(initCanvas, 50);
+
+      document.getElementById('challengeModal').classList.remove('hidden');
+    }
+
+    document.getElementById('btnRevealAnswer').addEventListener('click', () => {
+      sound.playFlip();
+      document.getElementById('answerMask').classList.add('hidden');
+    });
+
+    document.getElementById('btnCloseChallenge').addEventListener('click', () => {
+      document.getElementById('challengeModal').classList.add('hidden');
+      currentChallengingMonster = null;
+    });
+
+    // VERDICT A: Failed -> Monster Upgrades Level & Stays in Battle
+    document.getElementById('btnVerdictFail').addEventListener('click', async () => {
+      if (!currentChallengingMonster) return;
+      sound.playUpgradeFail();
+
+      // Spec LV1-LV3 upgrade transition
+      const nextLevel = Math.min(3, currentChallengingMonster.level + 1);
+      currentChallengingMonster.level = nextLevel;
+      currentChallengingMonster.consecutivePasses = 0;
+      currentChallengingMonster.lastReviewedAt = Date.now();
+
+      await idbSaveMonster(currentChallengingMonster);
+      document.getElementById('challengeModal').classList.add('hidden');
+
+      showToast(`⚠️ 复习未通过！${currentChallengingMonster.monsterName} 愤怒进阶为 LV${nextLevel} 并留在待消灭列表！`);
+      renderApp();
+    });
+
+    // VERDICT B: Passed -> Purified with Confetti & Fanfare
+    document.getElementById('btnVerdictPass').addEventListener('click', async () => {
+      if (!currentChallengingMonster) return;
+      sound.playPurifiedFanfare();
+
+      // Confetti celebration
+      if (window.confetti) {
+        window.confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+
+      currentChallengingMonster.status = 'PURIFIED';
+      currentChallengingMonster.consecutivePasses = (currentChallengingMonster.consecutivePasses || 0) + 1;
+      currentChallengingMonster.lastReviewedAt = Date.now();
+
+      await idbSaveMonster(currentChallengingMonster);
+      document.getElementById('challengeModal').classList.add('hidden');
+
+      showToast(`🎉 太棒了！已击败并净化【${currentChallengingMonster.monsterName}】，徽章已移入图鉴！`);
+      renderApp();
+    });
+
+    /* =========================================================================
+       7. 录题与表单校验 (Strict PRD Compliance)
+       ========================================================================= */
+    const addModal = document.getElementById('addModal');
+    const addForm = document.getElementById('addMonsterForm');
+
+    function openAddDialog() {
+      addForm.reset();
+      clearFormErrors();
+      // Deselect all reason radio cards visual style
+      document.querySelectorAll('#reasonRadioGroup label').forEach(lbl => {
+        lbl.classList.remove('border-yellow-500', 'bg-yellow-100');
+      });
+      addModal.classList.remove('hidden');
+    }
+
+    function closeAddDialog() {
+      addModal.classList.add('hidden');
+    }
+
+    function clearFormErrors() {
+      document.getElementById('errQuestion').classList.add('hidden');
+      document.getElementById('errAnswer').classList.add('hidden');
+      document.getElementById('errReason').classList.add('hidden');
+      document.getElementById('inputQuestion').classList.remove('border-red-500', 'bg-red-50');
+      document.getElementById('inputAnswer').classList.remove('border-red-500', 'bg-red-50');
+    }
+
+    document.getElementById('btnOpenAddModal').addEventListener('click', openAddDialog);
+    document.getElementById('btnEmptySpawn').addEventListener('click', openAddDialog);
+    document.getElementById('btnCloseAddModal').addEventListener('click', closeAddDialog);
+    document.getElementById('btnCancelAdd').addEventListener('click', closeAddDialog);
+
+    // Reason Radio visual selection toggle
+    document.querySelectorAll('#reasonRadioGroup input[type="radio"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        document.querySelectorAll('#reasonRadioGroup label').forEach(lbl => {
+          lbl.classList.remove('border-black', 'bg-yellow-100', 'shadow-[2px_2px_0_#000]');
+        });
+        const parentLabel = radio.closest('label');
+        if (parentLabel) {
+          parentLabel.classList.add('border-black', 'bg-yellow-100', 'shadow-[2px_2px_0_#000]');
+        }
+      });
+    });
+
+    // Form Submission & Validation Check
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearFormErrors();
+
+      const question = document.getElementById('inputQuestion').value.trim();
+      const answer = document.getElementById('inputAnswer').value.trim();
+      const selectedReason = document.querySelector('input[name="mistakeReason"]:checked')?.value;
+
+      let hasError = false;
+
+      // PRD Validation Rule 1: Question Required
+      if (!question) {
+        document.getElementById('errQuestion').classList.remove('hidden');
+        document.getElementById('inputQuestion').classList.add('border-red-500', 'bg-red-50');
+        hasError = true;
+      }
+
+      // PRD Validation Rule 2: Answer Required
+      if (!answer) {
+        document.getElementById('errAnswer').classList.remove('hidden');
+        document.getElementById('inputAnswer').classList.add('border-red-500', 'bg-red-50');
+        hasError = true;
+      }
+
+      // PRD Validation Rule 3: Mistake Reason Required
+      if (!selectedReason) {
+        document.getElementById('errReason').classList.remove('hidden');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      const species = MONSTER_SPECIES[selectedReason];
+      const newCard = {
+        id: 'monster_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        question,
+        correctAnswer: answer,
+        reason: selectedReason,
+        monsterName: species.name,
+        monsterAvatar: species.avatar,
+        status: 'ACTIVE',
+        level: 1, // LV1 Initial
+        consecutivePasses: 0,
+        lastReviewedAt: null,
+        createdAt: Date.now(),
+        cloudId: null,
+        userId: null,
+        imageUrl: null
+      };
+
+      try {
+        await idbSaveMonster(newCard);
+        sound.playSpawn();
+        closeAddDialog();
+        showToast(`👾 成功召唤【${newCard.monsterName}】！已盘踞在主战场。`);
+        await loadAllData();
+      } catch (err) {
+        showToast('保存失败：存储空间受限或被拦截', true);
+      }
+    });
+
+    // Simulated Save Failure Button (To let user experience PRD error state)
+    document.getElementById('btnTestSimulateError').addEventListener('click', () => {
+      showToast('⚠️ [模拟异常恢复测试] 写入失败：已捕获 ERR_IDB_UNAVAILABLE，前端界面维持可用并自动降级！', true);
+    });
+
+    /* =========================================================================
+       8. 快速预置用例 (含数学几何、长题干、代码题目)
+       ========================================================================= */
+    document.getElementById('btnQuickPreset').addEventListener('click', async () => {
+      const presets = [
+        {
+          id: 'test_long_math_' + Date.now(),
+          question: `【几何与三角函数综合题】\n如图，在平面直角坐标系 xOy 中，已知椭圆 C: x²/a² + y²/b² = 1 (a > b > 0) 的离心率为 1/2，点 F(1, 0) 为其右焦点。\n(1) 求椭圆 C 的标准方程；\n(2) 设经过点 P(2, 0) 的直线 l 与椭圆交于 A, B 两点，已知 OA·OB = -1/2，试求直线 l 的斜率取值范围，并证明面积恒定性。`,
+          correctAnswer: `(1) c=1, e=c/a=1/2 => a=2, b²=a²-c²=3。椭圆方程为 x²/4 + y²/3 = 1。\n(2) 设直线方程为 x = my + 2，联立椭圆方程消元求根与韦达定理。解得斜率范围为 k ∈ (-√3/2, √3/2) 且 k ≠ 0。`,
+          reason: 'FORMULA_FORGOTTEN',
+          monsterName: '遗忘黏黏怪',
+          monsterAvatar: '🧪',
+          status: 'ACTIVE',
+          level: 2,
+          consecutivePasses: 0,
+          lastReviewedAt: null,
+          createdAt: Date.now() - (3 * 86400000) // 3 days ago for weekend priority
+        },
+        {
+          id: 'test_careless_physics_' + Date.now(),
+          question: `【物理动力学】质量为 2kg 的物块在水平拉力 F=10N 作用下沿粗糙水平面滑动，滑动摩擦系数 μ=0.2。运动 3s 后撤去拉力，重力加速度 g=10m/s²。\n求物块从撤去拉力直到停止继续滑行的距离。\n(注意：学生错将摩擦力算成 2N 而漏乘质量 m=2kg)`,
+          correctAnswer: `摩擦力 f = μmg = 0.2 × 2 × 10 = 4N。\n第 3 秒末速度 v = at = [(10-4)/2] × 3 = 9m/s。\n撤去拉力后减速 a' = f/m = 2m/s²。\n继续滑行距离 s = v² / (2a') = 81 / 4 = 20.25 米。`,
+          reason: 'CARELESS',
+          monsterName: '分心呆呆魔',
+          monsterAvatar: '😈',
+          status: 'ACTIVE',
+          level: 3, // LV3
+          consecutivePasses: 0,
+          lastReviewedAt: null,
+          createdAt: Date.now() - (6 * 86400000)
+        }
+      ];
+
+      for (const p of presets) {
+        await idbSaveMonster(p);
+      }
+      sound.playSpawn();
+      showToast('⚡ 已注入长题干综合错题（包含 LV2 与 LV3 题目）！');
+      await loadAllData();
+    });
+
+    /* =========================================================================
+       9. 打印复习卷 (Print Sheet)
+       ========================================================================= */
+    document.getElementById('btnPrintSheet').addEventListener('click', () => {
+      const activeList = allMonsters.filter(m => m.status === 'ACTIVE');
+      if (activeList.length === 0) {
+        showToast('当前没有待消灭的错题，无需打印！');
+        return;
+      }
+
+      document.getElementById('printDate').textContent = new Date().toLocaleDateString();
+      document.getElementById('printTotalCount').textContent = activeList.length;
+
+      const printList = document.getElementById('printCardsList');
+      printList.innerHTML = '';
+
+      activeList.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'border-2 border-black p-4 rounded-lg';
+        div.innerHTML = `
+          <div class="flex justify-between items-center mb-2 font-bold text-sm">
+            <span>第 ${index + 1} 题【${item.monsterName} • LV${item.level}】</span>
+            <span class="text-xs text-gray-500">错因：${MONSTER_SPECIES[item.reason]?.borderBadge || ''}</span>
+          </div>
+          <div class="text-sm font-semibold mb-4 whitespace-pre-wrap">${escapeHtml(item.question)}</div>
+          <div class="h-28 border border-dashed border-gray-400 rounded p-2 text-xs text-gray-400">
+            [演算与解答区域]
+          </div>
+        `;
+        printList.appendChild(div);
+      });
+
+      window.print();
+    });
+
+    /* =========================================================================
+       10. 视图切换 & 周末试炼排序开关
+       ========================================================================= */
+    const tabBattle = document.getElementById('tabBattle');
+    const tabGallery = document.getElementById('tabGallery');
+    const viewBattle = document.getElementById('viewBattleground');
+    const viewGallery = document.getElementById('viewGallery');
+
+    tabBattle.addEventListener('click', () => {
+      tabBattle.className = 'neo-btn bg-black text-white px-3.5 py-1 rounded-md text-xs font-bold transition';
+      tabGallery.className = 'neo-btn bg-white text-black hover:bg-gray-100 px-3.5 py-1 rounded-md text-xs font-bold transition';
+      viewBattle.classList.remove('hidden');
+      viewGallery.classList.add('hidden');
+      currentTab = 'battle';
+    });
+
+    tabGallery.addEventListener('click', () => {
+      tabGallery.className = 'neo-btn bg-black text-white px-3.5 py-1 rounded-md text-xs font-bold transition';
+      tabBattle.className = 'neo-btn bg-white text-black hover:bg-gray-100 px-3.5 py-1 rounded-md text-xs font-bold transition';
+      viewGallery.classList.remove('hidden');
+      viewBattle.classList.add('hidden');
+      currentTab = 'gallery';
+    });
+
+    document.getElementById('btnBackToBattle').addEventListener('click', () => {
+      tabBattle.click();
+    });
+
+    document.getElementById('btnToggleWeekendTrial').addEventListener('click', () => {
+      isWeekendTrialMode = !isWeekendTrialMode;
+      const trialBadge = document.getElementById('trialBadge');
+      const trialNotice = document.getElementById('trialQueueNotice');
+      if (isWeekendTrialMode) {
+        trialBadge.classList.remove('hidden');
+        trialNotice.classList.remove('hidden');
+        showToast('🔥 已开启周末试炼权重排序：等级高、积压久的怪兽排在最前面！');
+      } else {
+        trialBadge.classList.add('hidden');
+        trialNotice.classList.add('hidden');
+        showToast('已切换为默认创建时间排序');
+      }
+      renderApp();
+    });
+
+    /* Toast Helper */
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('statusToast');
+      const toastMsg = document.getElementById('statusToastMsg');
+      toastMsg.textContent = msg;
+      if (isError) {
+        toast.className = 'mb-4 p-3 rounded-lg border-2 border-black neo-box-sm text-sm font-bold flex items-center justify-between bg-red-100 text-red-900 border-red-900';
+      } else {
+        toast.className = 'mb-4 p-3 rounded-lg border-2 border-black neo-box-sm text-sm font-bold flex items-center justify-between bg-yellow-200 text-black';
+      }
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 5000);
+    }
+
+    function escapeHtml(string) {
+      const matchHtmlRegExp = /["'&<>]/;
+      const str = '' + string;
+      const match = matchHtmlRegExp.exec(str);
+      if (!match) return str;
+      let escape;
+      let html = '';
+      let index = 0;
+      let lastIndex = 0;
+      for (index = match.index; index < str.length; index++) {
+        switch (str.charCodeAt(index)) {
+          case 34: escape = '&quot;'; break;
+          case 38: escape = '&amp;'; break;
+          case 39: escape = '&#39;'; break;
+          case 60: escape = '&lt;'; break;
+          case 62: escape = '&gt;'; break;
+          default: continue;
+        }
+        if (lastIndex !== index) html += str.substring(lastIndex, index);
+        lastIndex = index + 1;
+        html += escape;
+      }
+      return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
+    }
+
+    // App Initialization on load
+    window.addEventListener('load', () => {
+      loadAllData();
+      window.addEventListener('resize', () => {
+        if (!document.getElementById('challengeModal').classList.contains('hidden')) {
+          initCanvas();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
